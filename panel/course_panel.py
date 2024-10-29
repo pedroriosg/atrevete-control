@@ -54,7 +54,7 @@ def display_course_panel():
 
     if selected_school and selected_year:
         courses_data = get_courses(selected_school, selected_year)
-        
+
         with col3:
             if not courses_data.empty:
                 courses_list = courses_data['grade_name'] + " - " + courses_data['subject_name']
@@ -66,7 +66,7 @@ def display_course_panel():
             if not course_info.empty:
                 with st.expander("Usuarios", expanded=False):
                     user_data = get_users_by_course(selected_course_id)
-                    
+
                     col_filter_1, col_filter_2, col_filter_3 = st.columns(3)
                     with col_filter_1:
                         role_filter = st.selectbox("Filtrar por rol", ["Todos", "Profesores", "Alumnos"])
@@ -94,19 +94,17 @@ def display_course_panel():
                         display_user_education(user_data)
 
                 with st.expander("Asistencia", expanded=False):
-                    attendance_data = get_attendance_by_course(selected_course_id)                    
+                    if 'attendance_data' not in st.session_state:
+                        st.session_state.attendance_data = get_attendance_by_course(selected_course_id)
 
-
+                    attendance_data = st.session_state.attendance_data
                     display_course_attendance_chart(attendance_data)
 
-                    # Obtén los datos de la consulta
-                    detailed_attendance = fetch_detailed_attendance_by_course(selected_course_id)
+                    if 'detailed_attendance' not in st.session_state:
+                        st.session_state.detailed_attendance = fetch_detailed_attendance_by_course(selected_course_id)
 
-                    # Mostrar tabla de asistencia detallada
-                    # st.write("Asistencia detallada")
-                    # st.dataframe(detailed_attendance, use_container_width=True)
+                    detailed_attendance = st.session_state.detailed_attendance
                     
-                    # Renombra las columnas de asistencia usando las fechas obtenidas
                     if not detailed_attendance.empty:
                         # Obtén los valores de asistencia
                         date_t = detailed_attendance.loc[0, 'date_t']
@@ -131,14 +129,11 @@ def display_course_panel():
                         st.write("Ranking de asistencia")
                         st.dataframe(detailed_attendance[['name', 'lastName', f"{date_t2}", f"{date_t1}", f"{date_t}", 'total_attendance_percentage']], use_container_width=True)
 
-                                    
                     dates = attendance_data['class_date'].unique().tolist()
 
                     col1, col2 = st.columns(2)
 
-                    
                     with col1:
-                        # Seleccionar desde la fecha más reciemte
                         selected_date = st.selectbox("Selecciona una fecha", dates[::-1])
 
                     with col2:
@@ -158,11 +153,13 @@ def display_course_panel():
                         filtered_data_display = filtered_data[['name', 'lastName', 'phone']]
                         st.dataframe(filtered_data_display, use_container_width=True)
 
-                with st.expander("Evaluaciones", expanded=True):
-                    evaluations_data = fetch_evaluations_by_course(selected_course_id)
+                with st.expander("Evaluaciones", expanded=False):
+                    if 'evaluations_data' not in st.session_state:
+                        st.session_state.evaluations_data = fetch_evaluations_by_course(selected_course_id)
+
+                    evaluations_data = st.session_state.evaluations_data
 
                     if not evaluations_data.empty:
-                        
                         # Crear un diccionario que mapee los tipos de evaluación a sus IDs
                         assessment_type_mapping = {
                             row['assessment_type_name']: row['assessment_type_id'] 
@@ -183,10 +180,8 @@ def display_course_panel():
 
                             display_assessment_performance_chart(performance_data)
                         
-
                             assessment_names = evaluations_data['assessment_name'].unique().tolist()
                             selected_assessment_name = st.selectbox("", assessment_names)
                                 
                     else:
                         st.write("No se encontraron evaluaciones para este curso.")
-
