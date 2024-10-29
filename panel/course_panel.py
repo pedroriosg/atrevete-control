@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
-from queries import fetch_schools, fetch_years, fetch_courses_of_school, fetch_users_by_course, fetch_attendance_by_course, fetch_attendance_by_date, fetch_detailed_attendance_by_course, fetch_users
+from queries import fetch_schools, fetch_years, fetch_courses_of_school, fetch_users_by_course, fetch_attendance_by_course, fetch_attendance_by_date, fetch_detailed_attendance_by_course, fetch_performance_by_assessment_type, fetch_evaluations_by_course
 from views.users.user_charts import display_user_charts
 from views.users.user_education import display_user_education
 from views.users.course_attendance import display_course_attendance_chart
+from views.users.course_evaluations import display_assessment_performance_chart
 
 @st.cache_data
 def get_schools():
@@ -29,6 +30,13 @@ def get_attendance_by_course(course_id):
 def get_attendance_by_date(course_id, date):
     return fetch_attendance_by_date(course_id, date)
 
+@st.cache_data
+def get_evaluations_by_course(course_id):
+    return fetch_evaluations_by_course(course_id)
+
+@st.cache_data
+def get_performance_by_assessment_type(course_id, assessment_type_id):
+    return fetch_performance_by_assessment_type(course_id, assessment_type_id)
 
 def display_course_panel():
     schools_data = get_schools()
@@ -85,7 +93,7 @@ def display_course_panel():
                     if role_filter == "Profesores":
                         display_user_education(user_data)
 
-                with st.expander("Asistencia", expanded=True):
+                with st.expander("Asistencia", expanded=False):
                     attendance_data = get_attendance_by_course(selected_course_id)                    
 
 
@@ -150,5 +158,35 @@ def display_course_panel():
                         filtered_data_display = filtered_data[['name', 'lastName', 'phone']]
                         st.dataframe(filtered_data_display, use_container_width=True)
 
-                with st.expander("Evaluaciones", expanded=False):
-                    pass  # Aquí colocarías la lógica para cargar evaluaciones si fuera necesario
+                with st.expander("Evaluaciones", expanded=True):
+                    evaluations_data = fetch_evaluations_by_course(selected_course_id)
+
+                    if not evaluations_data.empty:
+                        
+                        # Crear un diccionario que mapee los tipos de evaluación a sus IDs
+                        assessment_type_mapping = {
+                            row['assessment_type_name']: row['assessment_type_id'] 
+                            for _, row in evaluations_data.iterrows()
+                        }
+                        
+                        assessment_types = list(assessment_type_mapping.keys())
+
+                        # Selecciona el tipo de evaluación
+                        selected_assessment_type_name = st.selectbox("Selecciona un tipo de evaluación", assessment_types)
+
+                        # Verifica que el tipo de evaluación seleccionado existe en el mapeo
+                        if selected_assessment_type_name in assessment_type_mapping:
+                            selected_assessment_type_id = assessment_type_mapping[selected_assessment_type_name]
+
+                            # Obtener el rendimiento de las evaluaciones para el gráfico
+                            performance_data = fetch_performance_by_assessment_type(selected_course_id, selected_assessment_type_id)
+
+                            display_assessment_performance_chart(performance_data)
+                        
+
+                            assessment_names = evaluations_data['assessment_name'].unique().tolist()
+                            selected_assessment_name = st.selectbox("", assessment_names)
+                                
+                    else:
+                        st.write("No se encontraron evaluaciones para este curso.")
+

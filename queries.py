@@ -214,3 +214,108 @@ def fetch_detailed_attendance_by_course(course_id):
     '''
     with get_connection() as conn:
         return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id), int(course_id), int(course_id), int(course_id)))
+
+### EVALUACIONES
+
+def fetch_evaluations_by_course(course_id):
+    print("Fetching evaluations")
+    query = f"""
+    SELECT 
+        a.id AS assessment_id,
+        a.name AS assessment_name,
+        at.name AS assessment_type_name,
+        at.id AS assessment_type_id
+    FROM "Assessments" a
+    LEFT JOIN "AssessmentCourses" ac ON ac."AssessmentId" = a.id
+    LEFT JOIN "AssessmentTypes" at ON a."AssessmentTypeId" = at.id
+    WHERE ac."CourseId" = {course_id}
+    ORDER BY a.name
+    """
+    with get_connection() as conn:
+        return pd.read_sql(query, conn)
+
+def fetch_performance_by_assessment_type(course_id, assessment_type_id):
+    print("Fetching performance by assessment type")
+
+    # Consulta para obtener todas las evaluaciones de un tipo específico para un curso
+    evaluations_query = f"""
+    SELECT a.id AS assessment_id, a.name AS assessment_name, a."correctAnswer"
+    FROM "Assessments" a
+    JOIN "AssessmentTypes" at ON a."AssessmentTypeId" = at.id
+    JOIN "AssessmentCourses" ac ON a.id = ac."AssessmentId"
+    WHERE ac."CourseId" = {course_id} AND a."AssessmentTypeId" = {assessment_type_id} AND ac.state = 'results'
+    """
+
+    with get_connection() as conn:
+        evaluations_data = pd.read_sql(evaluations_query, conn)
+
+    performance_results = []
+
+    for _, row in evaluations_data.iterrows():
+        assessment_id = row['assessment_id']
+        correct_answer = row['correctAnswer']
+        length_of_correct_answer = len(correct_answer)
+
+        # Consulta para obtener el rendimiento de los usuarios para esta evaluación
+        performance_query = f"""
+        WITH course_users AS (
+            SELECT uc."UserId"
+            FROM "UserCourses" uc
+            WHERE uc."CourseId" = {course_id} AND uc."role" = 'student'
+        ),
+        answered_users AS (
+            SELECT ans."UserId", ans.answer
+            FROM "Answers" ans
+            WHERE ans."AssessmentId" = {assessment_id}
+            AND ans."UserId" IN (SELECT "UserId" FROM course_users)
+        ),
+        performance_calculation AS (
+            SELECT 
+                au."UserId",
+                LENGTH('{correct_answer}') AS total_chars,
+                -- Count the number of correct characters
+                SUM(CASE 
+                    WHEN SUBSTRING(au.answer, i, 1) = SUBSTRING('{correct_answer}', i, 1) THEN 1 
+                    ELSE 0 
+                END) AS correct_char_count
+            FROM answered_users au
+            CROSS JOIN generate_series(1, LENGTH('{correct_answer}')) AS i
+            GROUP BY au."UserId"
+        )
+        SELECT 
+            ROUND((SUM(pc.correct_char_count)::numeric / SUM(pc.total_chars)) * 100, 2) AS performance_percentage,
+            COUNT(DISTINCT CASE 
+                WHEN LENGTH(au.answer) = {length_of_correct_answer} AND au.answer = repeat('-', {length_of_correct_answer}) 
+                THEN pc."UserId" 
+                END) AS absent_users
+        FROM performance_calculation pc 
+        JOIN course_users cu ON pc."UserId" = cu."UserId"
+        JOIN answered_users au ON pc."UserId" = au."UserId"
+        GROUP BY cu."UserId";
+        """
+
+        with get_connection() as conn:
+            performance_data = pd.read_sql(performance_query, conn)
+
+        absent_users_count = performance_data['absent_users'].sum()
+        total_users = len(performance_data)
+
+        present_users_data = performance_data[performance_data['absent_users'] == 0]
+
+        # Calcular rendimiento considerando solo usuarios presentes
+        performance_percentage = present_users_data['performance_percentage'].mean() if len(present_users_data) > 0 else 0
+        
+        # Calcular el porcentaje de asistencia
+        attendance_percentage = (1 - (absent_users_count / total_users)) * 100 if total_users > 0 else 0
+
+
+        performance_results.append({
+            'assessment_id': assessment_id,
+            'assessment_name': row['assessment_name'],
+            'average_performance': performance_percentage,
+            'absent_users': absent_users_count,
+            'attendance_percentage': attendance_percentage,
+            'total_users': total_users
+        })
+
+    return performance_results
