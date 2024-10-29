@@ -10,10 +10,14 @@ def display_course_attendance_chart(attendance_data):
         fig.add_trace(go.Scatter(
             x=attendance_data['class_date'],
             y=attendance_data['attendance_percentage'],
-            mode='lines+markers',
+            mode='lines+markers+text',  # Asegúrate de que 'text' esté habilitado
             name='Porcentaje de Asistencia',
             line=dict(color='blue', width=2),
-            marker=dict(size=4)
+            marker=dict(size=4),
+            text=attendance_data['attended_count'],  # Añadir attendees como texto
+            textposition='top center',  # Posición del texto encima de los puntos
+            hovertemplate='Cantidad: %{text}<br>Porcentaje: %{y:.2f}%',  # Formato de hover
+            showlegend=True  # Si deseas mostrar la leyenda
         ))
 
         # Calcular la asistencia promedio
@@ -52,6 +56,5 @@ def display_course_attendance_chart(attendance_data):
 
         # Mostrar el gráfico en Streamlit
         st.plotly_chart(fig)
-    
     else:
         st.write("No hay datos de asistencia disponibles.")
