@@ -51,10 +51,10 @@ def display_course_panel():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        selected_school = st.selectbox("Selecciona un colegio", school_names)
+        selected_year = st.selectbox("Selecciona un año", years_names)
 
     with col2:
-        selected_year = st.selectbox("Selecciona un año", years_names)
+        selected_school = st.selectbox("Selecciona un colegio", school_names)
 
     if selected_school and selected_year:
         courses_data = get_courses(selected_school, selected_year)
