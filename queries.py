@@ -102,24 +102,24 @@ def fetch_attendance_by_course(course_id):
     print("Fetching general attendance by course for all days")
     query = '''
     SELECT 
-    cd.date AS class_date,
-    COUNT(DISTINCT a."UserId") AS attended_count,
-    (COUNT(DISTINCT a."UserId")::FLOAT / NULLIF(total_students.total_count, 0)) * 100 AS attendance_percentage
-FROM "Classdays" cd
-LEFT JOIN "Attendances" a ON cd.id = a."ClassdayId" AND a."CourseId" = %s
-LEFT JOIN (
-    SELECT uc."CourseId", COUNT(DISTINCT uc."UserId") AS total_count
-    FROM "UserCourses" uc
-    WHERE uc."role" = 'student' AND uc."CourseId" = %s
-    GROUP BY uc."CourseId"
-) AS total_students ON total_students."CourseId" = %s
-WHERE cd.state = 'finished'
-GROUP BY cd.date, total_students.total_count
-ORDER BY TO_DATE(cd.date, 'DDMMYY') ASC;
-
+        cd.date AS class_date,
+        COUNT(DISTINCT a."UserId") AS attended_count,
+        (COUNT(DISTINCT a."UserId")::FLOAT / NULLIF(total_students.total_count, 0)) * 100 AS attendance_percentage
+    FROM "Classdays" cd
+    INNER JOIN "ClassdayCourses" cc ON cd.id = cc."ClassdayId" AND cc."CourseId" = %s
+    LEFT JOIN "Attendances" a ON cd.id = a."ClassdayId" AND a."CourseId" = %s
+    LEFT JOIN (
+        SELECT uc."CourseId", COUNT(DISTINCT uc."UserId") AS total_count
+        FROM "UserCourses" uc
+        WHERE uc."role" = 'student' AND uc."CourseId" = %s
+        GROUP BY uc."CourseId"
+    ) AS total_students ON total_students."CourseId" = %s
+    WHERE cd.state = 'finished'
+    GROUP BY cd.date, total_students.total_count
+    ORDER BY TO_DATE(cd.date, 'DDMMYY') ASC;
     '''
     with get_connection() as conn:
-        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id)))
+        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id), int(course_id)))
 
 
 def fetch_attendance_by_date(course_id, class_date):
@@ -139,13 +139,15 @@ def fetch_attendance_by_date(course_id, class_date):
         AND a."ClassdayId" = (
             SELECT cd.id 
             FROM "Classdays" cd
+            INNER JOIN "ClassdayCourses" cc ON cd.id = cc."ClassdayId" AND cc."CourseId" = %s
             WHERE cd.date = %s AND cd.state = 'finished'
         )
     WHERE uc."CourseId" = %s AND uc.role = 'student'
     ORDER BY u."lastName", u.name;
     '''
     with get_connection() as conn:
-        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), class_date, int(course_id)))
+        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id), class_date, int(course_id)))
+
 
 def fetch_detailed_attendance_by_course(course_id):
     print("Fetching detailed attendance by course with date-specific columns")
@@ -167,7 +169,7 @@ def fetch_detailed_attendance_by_course(course_id):
                MAX(CASE WHEN ocd.date_rank = 2 THEN (a."UserId" IS NOT NULL)::int ELSE 0 END) AS attended_t1,
                MAX(CASE WHEN ocd.date_rank = 3 THEN (a."UserId" IS NOT NULL)::int ELSE 0 END) AS attended_t2
         FROM "Users" u
-        LEFT JOIN "UserCourses" uc ON u.id = uc."UserId" AND uc.role = 'student'
+        LEFT JOIN "UserCourses" uc ON u.id = uc."UserId" AND uc.role = 'student' AND uc."CourseId" = %s
         LEFT JOIN ordered_classdays ocd ON ocd.classday_id IN (
             SELECT cd.id FROM "Classdays" cd
             JOIN "ClassdayCourses" cdc ON cd.id = cdc."ClassdayId"
@@ -211,4 +213,4 @@ def fetch_detailed_attendance_by_course(course_id):
         total_attendance_percentage ASC;
     '''
     with get_connection() as conn:
-        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id), int(course_id), int(course_id)))
+        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id), int(course_id), int(course_id), int(course_id)))

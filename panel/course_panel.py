@@ -130,7 +130,8 @@ def display_course_panel():
 
                     
                     with col1:
-                        selected_date = st.selectbox("Selecciona una fecha de clase", dates)
+                        # Seleccionar desde la fecha más reciemte
+                        selected_date = st.selectbox("Selecciona una fecha", dates[::-1])
 
                     with col2:
                         attendance_filter = st.selectbox("Filtrar por asistencia", ["Ausentes", "Presentes"])
