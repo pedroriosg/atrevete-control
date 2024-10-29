@@ -7,25 +7,58 @@ from views.users.course_attendance import display_course_attendance_chart
 import pandas as pd
 
 # Configuración de la página
-st.set_page_config(page_title="Panel de Control - Fundación Educacional Atrévete", layout="wide")
+st.set_page_config(
+    page_title="Panel de Control - Fundación Educacional Atrévete",
+    layout="wide",
+    page_icon="icon.png"  # Cambia esta ruta al ícono real
+)
 
-# Título y estilo del Dashboard
-st.title("Fundación Educacional Atrévete")
-st.markdown("---")
+@st.cache_data
+def get_schools():
+    return fetch_schools()
+
+@st.cache_data
+def get_years():
+    return fetch_years()
+
+@st.cache_data
+def get_users():
+    return fetch_users()
+
+@st.cache_data
+def get_courses(school, year):
+    return fetch_courses_of_school(school, year)
+
+@st.cache_data
+def get_users_by_course(course_id):
+    return fetch_users_by_course(course_id)
+
+@st.cache_data
+def get_attendance_by_course(course_id):
+    return fetch_attendance_by_course(course_id)
+
+@st.cache_data
+def get_attendance_by_date(course_id, date):
+    return fetch_attendance_by_date(course_id, date)
+
+
+
+# Centrar el ícono en la barra lateral
+col1, col2, col3 = st.sidebar.columns([1, 2, 1])  # Coloca tres columnas en la barra lateral
+with col2:  # Usa la columna del medio
+    st.image("atorange.png", use_column_width=True)
 
 menu_options = {
-    "Colegios": "🏫 Colegios",
-    "Usuarios": "👥 Usuarios"
+    "Detalle por colegio": "Detalle por colegio",
+    # "Usuarios": "Usuarios"
 }
 menu_selection = st.sidebar.selectbox("", list(menu_options.keys()), format_func=lambda x: menu_options[x])
 
 if menu_selection == "Usuarios":
-    # Filtro de rol
     role_filter = st.selectbox("", ["Todos", "Profesores", "Alumnos"])
-
-    # Cargar datos de usuarios al abrir la pestaña
+    
     with st.expander("Usuarios", expanded=True):
-        user_data = fetch_users()
+        user_data = get_users()
         columns_to_display = ["name", "lastName", "rut", "email", "birthday", "phone", "emergencyName", "emergencyNumber", "emergencyRelationship"]
         filtered_data_display = user_data[columns_to_display].copy()
         filtered_data_display['birthday'] = pd.to_datetime(filtered_data_display['birthday']).dt.date
@@ -34,10 +67,10 @@ if menu_selection == "Usuarios":
         if role_filter == "Profesores":
             display_user_education(user_data)
 
-elif menu_selection == "Colegios":
-    schools_data = fetch_schools()
+elif menu_selection == "Detalle por colegio":
+    schools_data = get_schools()
     school_names = schools_data['name'].tolist()
-    years_data = fetch_years()
+    years_data = get_years()
     years_names = years_data['name'].tolist()
 
     col1, col2, col3 = st.columns(3)
@@ -49,7 +82,7 @@ elif menu_selection == "Colegios":
         selected_year = st.selectbox("Selecciona un año", years_names)
 
     if selected_school and selected_year:
-        courses_data = fetch_courses_of_school(selected_school, selected_year)
+        courses_data = get_courses(selected_school, selected_year)
         
         with col3:
             if not courses_data.empty:
@@ -61,23 +94,40 @@ elif menu_selection == "Colegios":
             course_info = courses_data[courses_data['course_id'] == selected_course_id]
             if not course_info.empty:
                 with st.expander("Usuarios", expanded=False):
-                    user_data = fetch_users_by_course(selected_course_id)
-                    role_filter = st.selectbox("", ["Todos", "Profesores", "Alumnos"])
+                    user_data = get_users_by_course(selected_course_id)
+                    
+                    col_filter_1, col_filter_2, col_filter_3 = st.columns(3)
+                    with col_filter_1:
+                        role_filter = st.selectbox("Filtrar por rol", ["Todos", "Profesores", "Alumnos"])
+                    with col_filter_2:
+                        email_verified_filter = st.selectbox("Email verificado", ["Todos", "Sí", "No"])
+                    with col_filter_3:
+                        terms_accepted_filter = st.selectbox("Términos aceptados", ["Todos", "Sí", "No"])
+
+                    if role_filter != "Todos":
+                        role = 'teacher' if role_filter == "Profesores" else 'student'
+                        user_data = user_data[user_data['user_course_role'] == role]
+
+                    if email_verified_filter != "Todos":
+                        user_data = user_data[user_data['validEmail'] == (email_verified_filter == "Sí")]
+
+                    if terms_accepted_filter != "Todos":
+                        user_data = user_data[user_data['termsAccepted'] == (terms_accepted_filter == "Sí")]
+
                     columns_to_display = ["name", "lastName", "phone"]
                     filtered_data_display = user_data[columns_to_display].copy()
                     st.dataframe(filtered_data_display, use_container_width=True)
+                    
                     display_user_charts(user_data)
                     if role_filter == "Profesores":
                         display_user_education(user_data)
 
                 with st.expander("Asistencia", expanded=True):
-                    attendance_data = fetch_attendance_by_course(selected_course_id)
+                    attendance_data = get_attendance_by_course(selected_course_id)
                     display_course_attendance_chart(attendance_data)
 
-                    # Selector de clases (fechas) para mostrar la asistencia
                     dates = attendance_data['class_date'].unique().tolist()
 
-                    # Crear dos columnas
                     col1, col2 = st.columns(2)
 
                     with col1:
@@ -87,13 +137,11 @@ elif menu_selection == "Colegios":
                         attendance_filter = st.selectbox("Filtrar por asistencia", ["Ausentes", "Presentes", "Todos"])
 
                     if selected_date:
-                        attendance_status = fetch_attendance_by_date(selected_course_id, selected_date)
+                        attendance_status = get_attendance_by_date(selected_course_id, selected_date)
 
-                        # Filtra los presentes y ausentes
                         present_students = attendance_status[attendance_status['attendance_status'] == 'present']
                         absent_students = attendance_status[attendance_status['attendance_status'] == 'absent']
 
-                        # Filtrar el dataframe según la selección
                         if attendance_filter == "Presentes":
                             filtered_data = present_students
                         elif attendance_filter == "Ausentes":
@@ -101,14 +149,8 @@ elif menu_selection == "Colegios":
                         else:
                             filtered_data = attendance_status
 
-                        # Seleccionar columnas relevantes para la visualización
                         filtered_data_display = filtered_data[['name', 'lastName', 'phone']]
-
-                        # Mostrar en una tabla con capacidades de ordenamiento y filtrado
                         st.dataframe(filtered_data_display, use_container_width=True)
-
-                                    
-                    
 
                 with st.expander("Evaluaciones", expanded=False):
                     pass  # Aquí colocarías la lógica para cargar evaluaciones si fuera necesario

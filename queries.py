@@ -8,6 +8,7 @@ from db_connection import get_connection
 
 # Consultar información de usuarios
 def fetch_users():
+    print("Fetching users")
     query = """
     SELECT u.id, 
            u.name, 
@@ -33,6 +34,7 @@ def fetch_users():
     
     # Consultar información de colegios
 def fetch_schools():
+    print("Fetching schools")
     query = """
     SELECT name FROM "Schools"
     """
@@ -40,6 +42,7 @@ def fetch_schools():
         return pd.read_sql(query, conn)
     
 def fetch_years():
+    print("Fetching years")
     query = """
     SELECT name FROM "Years"
     """
@@ -47,6 +50,7 @@ def fetch_years():
         return pd.read_sql(query, conn)
 
 def fetch_courses_of_school(school_name, year_name):
+    print("Fetching courses")
     query = f"""
     SELECT 
         c.id AS course_id,
@@ -66,6 +70,7 @@ def fetch_courses_of_school(school_name, year_name):
 
 # Consultar información de usuarios por curso
 def fetch_users_by_course(course_id):
+    print("Fetching user courses")
     query = '''
     SELECT 
         u.id, 
@@ -93,6 +98,7 @@ def fetch_users_by_course(course_id):
         return pd.read_sql(query, conn, params=(int(course_id),))
 
 def fetch_attendance_by_course(course_id):
+    print ("Fetching attendance")
     query = '''
     SELECT 
         cd.date AS class_date,
@@ -114,6 +120,7 @@ def fetch_attendance_by_course(course_id):
         return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id)))
 
 def fetch_attendance_by_date(course_id, class_date):
+    print("Fetching attendance by date")
     query = '''
     SELECT 
         u.id, 
