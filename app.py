@@ -13,14 +13,16 @@ st.set_page_config(
 menu_options = {
     
     "Mi curso": "Mi curso",
+    # "Usuarios": "Usuarios"
 }
 menu_selection = st.sidebar.selectbox("", list(menu_options.keys()), format_func=lambda x: menu_options[x])
 
-if menu_selection == "Panel General":
-    display_general_panel()
+if menu_selection == "Mi curso":
+    display_course_panel()
+
+# elif menu_selection == "Panel General":
+#     display_general_panel()
 
 # elif menu_selection == "Usuarios":
 #     display_user_panel()
 
-# elif menu_selection == "Mi curso":
-#     display_course_panel()
