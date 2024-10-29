@@ -91,3 +91,24 @@ def fetch_users_by_course(course_id):
 '''
     with get_connection() as conn:
         return pd.read_sql(query, conn, params=(int(course_id),))
+
+def fetch_attendance_by_course(course_id):
+    query = '''
+    SELECT 
+        cd.date AS class_date,
+        COUNT(a."UserId") AS attended_count,
+        (COUNT(a."UserId")::FLOAT / NULLIF(total_students.total_count, 0)) * 100 AS attendance_percentage
+    FROM "Classdays" cd
+    LEFT JOIN "Attendances" a ON cd.id = a."ClassdayId" AND a."CourseId" = %s
+    LEFT JOIN (
+        SELECT uc."CourseId", COUNT(DISTINCT uc."UserId") AS total_count
+        FROM "UserCourses" uc
+        WHERE uc."role" = 'student' AND uc."CourseId" = %s
+        GROUP BY uc."CourseId"
+    ) AS total_students ON total_students."CourseId" = %s
+    WHERE cd.state = 'finished'
+    GROUP BY cd.date, total_students.total_count
+    ORDER BY TO_DATE(cd.date, 'DDMMYY') ASC;
+    '''
+    with get_connection() as conn:
+        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id)))

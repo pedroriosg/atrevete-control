@@ -1,8 +1,9 @@
 import streamlit as st
-from queries import fetch_users, fetch_schools, fetch_courses_of_school, fetch_years, fetch_users_by_course
+from queries import fetch_users, fetch_schools, fetch_courses_of_school, fetch_years, fetch_users_by_course, fetch_attendance_by_course
 from views.users.user_table import display_user_table
 from views.users.user_charts import display_user_charts
 from views.users.user_education import display_user_education
+from views.users.course_attendance import display_course_attendance_chart
 import pandas as pd
 
 # Configuración de la página
@@ -119,12 +120,8 @@ elif menu_selection == "Colegios":
                     
                 # Desplegable para la asistencia
                 with st.expander("Asistencia", expanded=False):
-                    # attendance_data = fetch_attendance(selected_course_id)
-                    # if attendance_data is not None and not attendance_data.empty:
-                    #     st.dataframe(attendance_data)
-                    # else:
-                    #     st.write("No hay datos de asistencia disponibles.")
-                    pass
+                    attendance_data = fetch_attendance_by_course(selected_course_id)
+                    display_course_attendance_chart(attendance_data)
 
                 # Desplegable para evaluaciones
                 with st.expander("Evaluaciones", expanded=False):
