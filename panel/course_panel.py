@@ -68,36 +68,8 @@ def display_course_panel():
         if selected_course_id is not None:
             course_info = courses_data[courses_data['course_id'] == selected_course_id]
             if not course_info.empty:
-                with st.expander("Usuarios", expanded=False):
-                    user_data = get_users_by_course(selected_course_id)
 
-                    col_filter_1, col_filter_2, col_filter_3 = st.columns(3)
-                    with col_filter_1:
-                        role_filter = st.selectbox("Filtrar por rol", ["Todos", "Profesores", "Alumnos"])
-                    with col_filter_2:
-                        email_verified_filter = st.selectbox("Email verificado", ["Todos", "Sí", "No"])
-                    with col_filter_3:
-                        terms_accepted_filter = st.selectbox("Términos aceptados", ["Todos", "Sí", "No"])
-
-                    if role_filter != "Todos":
-                        role = 'teacher' if role_filter == "Profesores" else 'student'
-                        user_data = user_data[user_data['user_course_role'] == role]
-
-                    if email_verified_filter != "Todos":
-                        user_data = user_data[user_data['validEmail'] == (email_verified_filter == "Sí")]
-
-                    if terms_accepted_filter != "Todos":
-                        user_data = user_data[user_data['termsAccepted'] == (terms_accepted_filter == "Sí")]
-
-                    columns_to_display = ["name", "lastName", "phone"]
-                    filtered_data_display = user_data[columns_to_display].copy()
-                    st.dataframe(filtered_data_display, use_container_width=True)
-                    
-                    display_user_charts(user_data)
-                    if role_filter == "Profesores":
-                        display_user_education(user_data)
-
-                with st.expander("Asistencia", expanded=False):
+                with st.expander("Asistencia", expanded=True):
                     if 'attendance_data' not in st.session_state:
                         st.session_state.attendance_data = get_attendance_by_course(selected_course_id)
 
@@ -157,7 +129,7 @@ def display_course_panel():
                         filtered_data_display = filtered_data[['name', 'lastName', 'phone']]
                         st.dataframe(filtered_data_display, use_container_width=True)
 
-                with st.expander("Evaluaciones", expanded=True):
+                with st.expander("Evaluaciones", expanded=False):
                     if 'evaluations_data' not in st.session_state:
                         st.session_state.evaluations_data = fetch_evaluations_by_course(selected_course_id)
 
@@ -217,5 +189,34 @@ def display_course_panel():
                             st.write("Tipo de evaluación no encontrado.")
                     else:
                         st.write("No se encontraron evaluaciones para este curso.")
+
+                with st.expander("Usuarios", expanded=False):
+                    user_data = get_users_by_course(selected_course_id)
+
+                    col_filter_1, col_filter_2, col_filter_3 = st.columns(3)
+                    with col_filter_1:
+                        role_filter = st.selectbox("Filtrar por rol", ["Todos", "Profesores", "Alumnos"])
+                    with col_filter_2:
+                        email_verified_filter = st.selectbox("Email verificado", ["Todos", "Sí", "No"])
+                    with col_filter_3:
+                        terms_accepted_filter = st.selectbox("Términos aceptados", ["Todos", "Sí", "No"])
+
+                    if role_filter != "Todos":
+                        role = 'teacher' if role_filter == "Profesores" else 'student'
+                        user_data = user_data[user_data['user_course_role'] == role]
+
+                    if email_verified_filter != "Todos":
+                        user_data = user_data[user_data['validEmail'] == (email_verified_filter == "Sí")]
+
+                    if terms_accepted_filter != "Todos":
+                        user_data = user_data[user_data['termsAccepted'] == (terms_accepted_filter == "Sí")]
+
+                    columns_to_display = ["name", "lastName", "phone"]
+                    filtered_data_display = user_data[columns_to_display].copy()
+                    st.dataframe(filtered_data_display, use_container_width=True)
+                    
+                    display_user_charts(user_data)
+                    if role_filter == "Profesores":
+                        display_user_education(user_data)
 
 
