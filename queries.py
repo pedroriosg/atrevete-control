@@ -167,7 +167,7 @@ def fetch_detailed_attendance_by_course(course_id):
                MAX(CASE WHEN ocd.date_rank = 2 THEN (a."UserId" IS NOT NULL)::int ELSE 0 END) AS attended_t1,
                MAX(CASE WHEN ocd.date_rank = 3 THEN (a."UserId" IS NOT NULL)::int ELSE 0 END) AS attended_t2
         FROM "Users" u
-        LEFT JOIN "UserCourses" uc ON u.id = uc."UserId" AND uc."CourseId" = %s AND uc.role = 'student'
+        LEFT JOIN "UserCourses" uc ON u.id = uc."UserId" AND uc.role = 'student'
         LEFT JOIN ordered_classdays ocd ON ocd.classday_id IN (
             SELECT cd.id FROM "Classdays" cd
             JOIN "ClassdayCourses" cdc ON cd.id = cdc."ClassdayId"
@@ -179,9 +179,8 @@ def fetch_detailed_attendance_by_course(course_id):
     ),
     total_days AS (
         SELECT COUNT(*) AS total_count
-        FROM "Attendances" a
-        JOIN "Classdays" cd ON a."ClassdayId" = cd.id
-        JOIN "ClassdayCourses" cdc ON cd.id = cdc."ClassdayId" AND cdc."CourseId" = %s
+        FROM "Classdays" cd
+        JOIN "ClassdayCourses" cdc ON cd.id = cdc."ClassdayId"
         WHERE cdc."CourseId" = %s AND cd.state = 'finished'
     ),
     recent_dates AS (
@@ -206,8 +205,10 @@ def fetch_detailed_attendance_by_course(course_id):
         user_attendance ua,
         total_days td,
         recent_dates rd
+    WHERE 
+        ua.id IS NOT NULL  -- Ensure only existing users are selected
     ORDER BY 
         total_attendance_percentage ASC;
     '''
     with get_connection() as conn:
-        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id), int(course_id), int(course_id), int(course_id), int(course_id)))
+        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id), int(course_id), int(course_id)))

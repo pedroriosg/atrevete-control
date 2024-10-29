@@ -116,8 +116,8 @@ def display_course_panel():
                         for date_column in [f"{date_t}", f"{date_t1}", f"{date_t2}"]:
                             detailed_attendance[date_column] = detailed_attendance[date_column].apply(lambda x: '✅' if x == 1 else '❌')
 
-                        # Formatear total_attendance_percentage (está como decimal)
-                        detailed_attendance['total_attendance_percentage'] = detailed_attendance['total_attendance_percentage'].apply(lambda x: f"{x:.0%}")
+                        # Formatear total_attendance_percentage (está como entero entre 0, 100, lo quiero sin decimales)
+                        detailed_attendance['total_attendance_percentage'] = detailed_attendance['total_attendance_percentage'].apply(lambda x: f"{x:.0f}%")
 
                         # Selecciona y muestra las columnas requeridas
                         st.write("Ranking de asistencia")
