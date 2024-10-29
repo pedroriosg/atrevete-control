@@ -1,7 +1,6 @@
 import psycopg2
 import streamlit as st
 
-
 # Configuración de la conexión a la base de datos
 DB_USER = st.secrets["DB_USER"]
 DB_PASSWORD = st.secrets["DB_PASSWORD"]
