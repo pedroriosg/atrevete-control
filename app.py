@@ -1,5 +1,5 @@
 import streamlit as st
-from queries import fetch_users, fetch_schools, fetch_courses_of_school, fetch_years, fetch_users_by_course, fetch_attendance_by_course, fetch_attendance_by_date
+from queries import fetch_users, fetch_schools, fetch_courses_of_school, fetch_years, fetch_users_by_course, fetch_attendance_by_course, fetch_attendance_by_date, fetch_detailed_attendance_by_course
 from views.users.user_table import display_user_table
 from views.users.user_charts import display_user_charts
 from views.users.user_education import display_user_education
@@ -46,7 +46,7 @@ def get_attendance_by_date(course_id, date):
 # Centrar el ícono en la barra lateral
 col1, col2, col3 = st.sidebar.columns([1, 2, 1])  # Coloca tres columnas en la barra lateral
 with col2:  # Usa la columna del medio
-    st.image("atorange.png", use_column_width=True)
+    st.image("ablue.png", use_column_width=True)
 
 menu_options = {
     "Detalle por colegio": "Detalle por colegio",
@@ -126,10 +126,35 @@ elif menu_selection == "Detalle por colegio":
                     attendance_data = get_attendance_by_course(selected_course_id)
                     display_course_attendance_chart(attendance_data)
 
+                    # Obtén los datos de la consulta
+                    detailed_attendance = fetch_detailed_attendance_by_course(selected_course_id)
+
+                    # Renombra las columnas de asistencia usando las fechas obtenidas
+                    if not detailed_attendance.empty:
+                        date_t = detailed_attendance.loc[0, 'date_t']
+                        date_t1 = detailed_attendance.loc[0, 'date_t1']
+                        date_t2 = detailed_attendance.loc[0, 'date_t2']
+
+                        # Renombra las columnas de asistencia usando las fechas
+                        detailed_attendance = detailed_attendance.rename(columns={
+                            'attended_t': f"{date_t}",
+                            'attended_t1': f"{date_t1}",
+                            'attended_t2': f"{date_t2}"
+                        })
+
+                        # Convierte 0 y 1 en los íconos de check y cruz
+                        for date_column in [f"{date_t}", f"{date_t1}", f"{date_t2}"]:
+                            detailed_attendance[date_column] = detailed_attendance[date_column].apply(lambda x: '✅' if x == 1 else '❌')
+
+                        # Selecciona y muestra las columnas requeridas
+                        st.write("Ranking de asistencia")
+                        st.dataframe(detailed_attendance[['name', 'lastName', f"{date_t2}", f"{date_t1}", f"{date_t}", 'total_attendance_percentage']], use_container_width=True)
+                    
                     dates = attendance_data['class_date'].unique().tolist()
 
                     col1, col2 = st.columns(2)
 
+                    
                     with col1:
                         selected_date = st.selectbox("Selecciona una fecha de clase", dates)
 

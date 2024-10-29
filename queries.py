@@ -143,3 +143,60 @@ def fetch_attendance_by_date(course_id, class_date):
     '''
     with get_connection() as conn:
         return pd.read_sql(query, conn, params=(int(course_id), int(course_id), class_date, int(course_id)))
+
+def fetch_detailed_attendance_by_course(course_id):
+    print("Fetching detailed attendance by course with date-specific columns")
+    query = '''
+    WITH ordered_classdays AS (
+    SELECT cd.date,
+           cd.id AS classday_id,
+           ROW_NUMBER() OVER (PARTITION BY cdc."CourseId" ORDER BY TO_DATE(cd.date, 'DDMMYY') DESC) AS date_rank
+    FROM "Classdays" cd
+    JOIN "ClassdayCourses" cdc ON cd.id = cdc."ClassdayId"
+    WHERE cdc."CourseId" = %s AND cd.state = 'finished'
+),
+user_attendance AS (
+    SELECT u.id,
+           u.name,
+           u."lastName",
+           COUNT(a."UserId") AS attended_classes,
+           MAX(CASE WHEN ocd.date_rank = 1 THEN (a."UserId" IS NOT NULL)::int ELSE 0 END) AS attended_t,
+           MAX(CASE WHEN ocd.date_rank = 2 THEN (a."UserId" IS NOT NULL)::int ELSE 0 END) AS attended_t1,
+           MAX(CASE WHEN ocd.date_rank = 3 THEN (a."UserId" IS NOT NULL)::int ELSE 0 END) AS attended_t2
+    FROM "Users" u
+    LEFT JOIN "UserCourses" uc ON u.id = uc."UserId" AND uc."CourseId" = %s AND uc.role = 'student'
+    LEFT JOIN ordered_classdays ocd ON ocd.date_rank <= 3
+    LEFT JOIN "Attendances" a ON u.id = a."UserId" AND a."ClassdayId" = ocd.classday_id
+    WHERE uc."CourseId" = %s
+    GROUP BY u.id, u.name, u."lastName"
+),
+recent_dates AS (
+    SELECT MAX(CASE WHEN date_rank = 1 THEN date END) AS date_t,
+           MAX(CASE WHEN date_rank = 2 THEN date END) AS date_t1,
+           MAX(CASE WHEN date_rank = 3 THEN date END) AS date_t2
+    FROM ordered_classdays
+),
+total_days AS (
+    SELECT COUNT(*) AS total_count
+    FROM ordered_classdays
+)
+SELECT 
+    ua.id,
+    ua.name,
+    ua."lastName",
+    (ua.attended_classes::FLOAT / NULLIF(td.total_count, 0)) * 100 AS total_attendance_percentage,
+    ua.attended_t,
+    ua.attended_t1,
+    ua.attended_t2,
+    rd.date_t,
+    rd.date_t1,
+    rd.date_t2
+FROM 
+    user_attendance ua,
+    total_days td,
+    recent_dates rd
+ORDER BY 
+    total_attendance_percentage ASC;
+    '''
+    with get_connection() as conn:
+        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id)))
