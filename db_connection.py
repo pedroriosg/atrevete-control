@@ -1,16 +1,13 @@
 import psycopg2
-import os
-from dotenv import load_dotenv
+import streamlit as st
 
-# Cargar las variables de entorno desde el archivo .env
-load_dotenv()
 
 # Configuración de la conexión a la base de datos
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_NAME = os.getenv("DB_NAME")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
+DB_USER = st.secrets["DB_USER"]
+DB_PASSWORD = st.secrets["DB_PASSWORD"]
+DB_NAME = st.secrets["DB_NAME"]
+DB_HOST = st.secrets["DB_HOST"]
+DB_PORT = st.secrets["DB_PORT"]
 
 def get_connection():
     return psycopg2.connect(
