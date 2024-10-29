@@ -112,3 +112,27 @@ def fetch_attendance_by_course(course_id):
     '''
     with get_connection() as conn:
         return pd.read_sql(query, conn, params=(int(course_id), int(course_id), int(course_id)))
+
+def fetch_attendance_by_date(course_id, class_date):
+    query = '''
+    SELECT 
+        u.id, 
+        u.name, 
+        u.phone,
+        u."lastName", 
+        CASE WHEN a."UserId" IS NOT NULL THEN 'present' ELSE 'absent' END AS attendance_status
+    FROM "Users" u
+    LEFT JOIN "UserCourses" uc ON u.id = uc."UserId" 
+        AND uc."CourseId" = %s
+    LEFT JOIN "Attendances" a ON u.id = a."UserId" 
+        AND a."CourseId" = %s 
+        AND a."ClassdayId" = (
+            SELECT cd.id 
+            FROM "Classdays" cd
+            WHERE cd.date = %s AND cd.state = 'finished'
+        )
+    WHERE uc."CourseId" = %s AND uc.role = 'student'
+    ORDER BY u."lastName", u.name;
+    '''
+    with get_connection() as conn:
+        return pd.read_sql(query, conn, params=(int(course_id), int(course_id), class_date, int(course_id)))

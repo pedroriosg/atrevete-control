@@ -37,7 +37,7 @@ def display_course_attendance_chart(attendance_data):
             x=attendance_data['class_date'],
             y=[average_attendance] * len(attendance_data),
             mode='lines',
-            name=f"Asistencia Promedio ({average_attendance:.2f}%)",
+            name=f"Asistencia Promedio ({average_attendance:.0f}%)",
             line=dict(color='green', width=2, dash='dash')
         ))
 
