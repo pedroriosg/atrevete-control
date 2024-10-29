@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from queries import fetch_schools, fetch_years, fetch_courses_of_school, fetch_users_by_course, fetch_attendance_by_course, fetch_attendance_by_date, fetch_detailed_attendance_by_course, fetch_performance_by_assessment_type, fetch_evaluations_by_course
+from queries import fetch_schools, fetch_years, fetch_courses_of_school, fetch_users_by_course, fetch_attendance_by_course, fetch_attendance_by_date, fetch_detailed_attendance_by_course, fetch_performance_by_assessment_type, fetch_evaluations_by_course, fetch_data_by_assessment_id
 from views.users.user_charts import display_user_charts
 from views.users.user_education import display_user_education
 from views.users.course_attendance import display_course_attendance_chart
@@ -37,6 +37,10 @@ def get_evaluations_by_course(course_id):
 @st.cache_data
 def get_performance_by_assessment_type(course_id, assessment_type_id):
     return fetch_performance_by_assessment_type(course_id, assessment_type_id)
+
+@st.cache_data
+def get_data_by_assessment_id(course_id, assessment_id):
+    return fetch_data_by_assessment_id(course_id, assessment_id)
 
 def display_course_panel():
     schools_data = get_schools()
@@ -153,7 +157,7 @@ def display_course_panel():
                         filtered_data_display = filtered_data[['name', 'lastName', 'phone']]
                         st.dataframe(filtered_data_display, use_container_width=True)
 
-                with st.expander("Evaluaciones", expanded=False):
+                with st.expander("Evaluaciones", expanded=True):
                     if 'evaluations_data' not in st.session_state:
                         st.session_state.evaluations_data = fetch_evaluations_by_course(selected_course_id)
 
@@ -165,7 +169,7 @@ def display_course_panel():
                             row['assessment_type_name']: row['assessment_type_id'] 
                             for _, row in evaluations_data.iterrows()
                         }
-                        
+
                         assessment_types = list(assessment_type_mapping.keys())
 
                         # Selecciona el tipo de evaluación
@@ -176,12 +180,42 @@ def display_course_panel():
                             selected_assessment_type_id = assessment_type_mapping[selected_assessment_type_name]
 
                             # Obtener el rendimiento de las evaluaciones para el gráfico
-                            performance_data = fetch_performance_by_assessment_type(selected_course_id, selected_assessment_type_id)
-
+                            performance_data = get_performance_by_assessment_type(selected_course_id, selected_assessment_type_id)
                             display_assessment_performance_chart(performance_data)
-                        
-                            assessment_names = evaluations_data['assessment_name'].unique().tolist()
-                            selected_assessment_name = st.selectbox("", assessment_names)
-                                
+
+                            # Agregar un selectbox para elegir una evaluación específica
+                            evaluation_ids = evaluations_data[evaluations_data['assessment_type_id'] == selected_assessment_type_id]['assessment_id'].tolist()
+                            evaluation_names = evaluations_data[evaluations_data['assessment_type_id'] == selected_assessment_type_id]['assessment_name'].tolist()
+
+                            if evaluation_ids:  # Verifica que haya IDs de evaluación
+                                selected_evaluation_name = st.selectbox("Selecciona una evaluación", evaluation_names)
+
+                                # Obtener el ID de la evaluación seleccionada
+                                selected_assessment_id = evaluation_ids[evaluation_names.index(selected_evaluation_name)]
+
+                                # Verificar si el ID de evaluación seleccionado ha cambiado
+                                if 'selected_assessment_id' not in st.session_state or st.session_state.selected_assessment_id != selected_assessment_id:
+                                    # Actualiza el ID y los datos de la evaluación en session_state
+                                    st.session_state.selected_assessment_id = selected_assessment_id
+                                    st.session_state.assessment_data = fetch_data_by_assessment_id(selected_course_id, selected_assessment_id)
+
+                                # Usa la variable guardada en session_state
+                                assessment_data = st.session_state.assessment_data
+
+                                # Añade un selector para filtrar entre presentes y ausentes
+                                filter_option = st.selectbox("Filtrar por:", ["Presentes", "Ausentes"])
+
+                                # Filtra el DataFrame según la selección
+                                if filter_option == "Presentes":
+                                    filtered_data = assessment_data[assessment_data["absent_users"] == 0]
+                                else:  # "Ausentes"
+                                    filtered_data = assessment_data[assessment_data["absent_users"] == 1]
+
+                                # Muestra la tabla sin la columna "absent_users"
+                                st.dataframe(filtered_data.drop(columns=["absent_users"]), use_container_width=True)
+                        else:
+                            st.write("Tipo de evaluación no encontrado.")
                     else:
                         st.write("No se encontraron evaluaciones para este curso.")
+
+

@@ -319,3 +319,71 @@ def fetch_performance_by_assessment_type(course_id, assessment_type_id):
         })
 
     return performance_results
+
+def fetch_data_by_assessment_id(course_id, assessment_id):
+    print("Fetching data by assessment ID:", assessment_id)
+
+    # Obtener la respuesta correcta de la evaluación
+    correct_answer_query = f"""
+    SELECT "correctAnswer"
+    FROM "Assessments"
+    WHERE id = {assessment_id}
+    """
+
+    with get_connection() as conn:
+        correct_answer_data = pd.read_sql(correct_answer_query, conn)
+
+    correct_answer = correct_answer_data['correctAnswer'].values[0]
+    length_of_correct_answer = len(correct_answer)
+
+    # Consulta para obtener los detalles de los usuarios y su rendimiento, incluyendo nombre, apellido y cantidad de respuestas correctas
+    query = f"""
+    WITH course_users AS (
+            SELECT uc."UserId"
+            FROM "UserCourses" uc
+            WHERE uc."CourseId" = {course_id} AND uc."role" = 'student'
+        ),
+        answered_users AS (
+            SELECT ans."UserId", ans.answer
+            FROM "Answers" ans
+            WHERE ans."AssessmentId" = {assessment_id}
+            AND ans."UserId" IN (SELECT "UserId" FROM course_users)
+        ),
+        performance_calculation AS (
+            SELECT 
+                au."UserId",
+                LENGTH('{correct_answer}') AS total_chars,
+                SUM(CASE 
+                    WHEN SUBSTRING(au.answer, i, 1) = SUBSTRING('{correct_answer}', i, 1) THEN 1 
+                    ELSE 0 
+                END) AS correct_char_count,
+                SUM(CASE 
+                    WHEN SUBSTRING(au.answer, i, 1) = SUBSTRING('{correct_answer}', i, 1) THEN 1 
+                    ELSE 0 
+                END) AS correct_answers
+            FROM answered_users au
+            CROSS JOIN generate_series(1, LENGTH('{correct_answer}')) AS i
+            GROUP BY au."UserId"
+        )
+        SELECT 
+            u."name",
+            u."lastName",
+            SUM(pc.correct_answers) AS good_answers,
+            SUM(pc.total_chars) AS total_answers,
+            ROUND((SUM(pc.correct_char_count)::numeric / SUM(pc.total_chars)) * 100, 2) AS performance_percentage,
+            COUNT(DISTINCT CASE 
+                WHEN LENGTH(au.answer) = {length_of_correct_answer} AND au.answer = repeat('-', {length_of_correct_answer}) 
+                THEN pc."UserId" 
+                END) AS absent_users
+        FROM performance_calculation pc 
+        JOIN course_users cu ON pc."UserId" = cu."UserId"
+        JOIN answered_users au ON pc."UserId" = au."UserId"
+        JOIN "Users" u ON pc."UserId" = u.id
+        GROUP BY u."name", u."lastName", cu."UserId"
+        ORDER BY performance_percentage DESC;
+    """
+
+    with get_connection() as conn:
+        performance_data = pd.read_sql(query, conn)
+
+    return performance_data
