@@ -107,7 +107,7 @@ def display_course_panel():
                 display_filtered_attendance(selected_course_id, selected_date, attendance_filter)
 
         # Sección de evaluaciones
-        with st.expander("Evaluaciones", expanded=False):
+        with st.expander("Evaluaciones", expanded=True):
             evaluations_data = st.session_state.evaluations_data
             if not evaluations_data.empty:
                 display_evaluation_filters(evaluations_data, selected_course_id)
@@ -115,7 +115,7 @@ def display_course_panel():
                 st.write("No se encontraron evaluaciones para este curso.")
 
         # Sección de usuarios
-        with st.expander("Usuarios", expanded=False):
+        with st.expander("Usuarios", expanded=True):
             display_user_filters()
 
 def format_attendance_data(detailed_attendance):
@@ -185,6 +185,7 @@ def display_specific_evaluation_filter(evaluations_data, selected_assessment_typ
 def display_user_filters():
     user_data = st.session_state.users_data
     col_filter_1, col_filter_2, col_filter_3 = st.columns(3)
+
     with col_filter_1:
         role_filter = st.selectbox("Filtrar por rol", ["Todos", "Profesores", "Alumnos"])
     with col_filter_2:
@@ -204,3 +205,9 @@ def display_user_filters():
 
     columns_to_display = ["name", "lastName", "phone"]
     st.dataframe(user_data[columns_to_display], use_container_width=True)
+
+    display_user_charts(user_data)
+
+    # Conditionally display user education based on the role filter
+    # if role_filter != "Alumnos":
+    #     display_user_education(user_data)
