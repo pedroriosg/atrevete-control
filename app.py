@@ -32,7 +32,6 @@ if not st.session_state.key_entered:
     if user_input == secret_key:
         st.session_state.key_entered = True
         key_input_container.empty()  # Limpia el contenedor del input
-        st.success("FUNDACIÓN EDUCACIONAL ATRÉVETE")
 
 # Si la clave es correcta, muestra el contenido
 if st.session_state.key_entered:
