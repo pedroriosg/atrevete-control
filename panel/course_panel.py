@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
-from queries import fetch_schools, fetch_years, fetch_courses_of_school, fetch_users_by_course, fetch_attendance_by_course, fetch_attendance_by_date, fetch_detailed_attendance_by_course, fetch_performance_by_assessment_type, fetch_evaluations_by_course, fetch_data_by_assessment_id
+from queries import (
+    fetch_schools, fetch_years, fetch_courses_of_school, fetch_users_by_course,
+    fetch_attendance_by_course, fetch_attendance_by_date, fetch_detailed_attendance_by_course,
+    fetch_performance_by_assessment_type, fetch_evaluations_by_course, fetch_data_by_assessment_id
+)
 from views.users.user_charts import display_user_charts
 from views.users.user_education import display_user_education
 from views.users.course_attendance import display_course_attendance_chart
@@ -51,172 +55,152 @@ def display_course_panel():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        selected_year = st.selectbox("Selecciona un año", years_names)
+        selected_year = st.selectbox("Selecciona un año", years_names, key="selected_year")
 
     with col2:
-        selected_school = st.selectbox("Selecciona un colegio", school_names)
+        selected_school = st.selectbox("Selecciona un colegio", school_names, key="selected_school")
 
     if selected_school and selected_year:
         courses_data = get_courses(selected_school, selected_year)
+        courses_list = courses_data['grade_name'] + " - " + courses_data['subject_name']
 
         with col3:
             if not courses_data.empty:
-                courses_list = courses_data['grade_name'] + " - " + courses_data['subject_name']
-                selected_course = st.selectbox("Selecciona un curso", courses_list)
+                selected_course = st.selectbox("Selecciona un curso", courses_list, key="selected_course")
                 selected_course_id = courses_data[courses_list == selected_course]['course_id'].values[0]
 
-        if selected_course_id is not None:
-            course_info = courses_data[courses_data['course_id'] == selected_course_id]
-            if not course_info.empty:
+        # Verificar si ha habido cambios en año, colegio o curso
+        if (
+            'last_year' not in st.session_state or
+            'last_school' not in st.session_state or
+            'last_course' not in st.session_state or
+            st.session_state.selected_year != st.session_state.last_year or
+            st.session_state.selected_school != st.session_state.last_school or
+            st.session_state.selected_course != st.session_state.last_course
+        ):
+            # Actualizar los valores actuales en la sesión
+            st.session_state.last_year = st.session_state.selected_year
+            st.session_state.last_school = st.session_state.selected_school
+            st.session_state.last_course = st.session_state.selected_course
 
-                with st.expander("Asistencia", expanded=True):
-                    if 'attendance_data' not in st.session_state:
-                        st.session_state.attendance_data = get_attendance_by_course(selected_course_id)
+            # Actualizar datos dependientes
+            st.session_state.attendance_data = get_attendance_by_course(selected_course_id)
+            st.session_state.detailed_attendance = fetch_detailed_attendance_by_course(selected_course_id)
+            st.session_state.evaluations_data = fetch_evaluations_by_course(selected_course_id)
+            st.session_state.users_data = get_users_by_course(selected_course_id)
 
-                    attendance_data = st.session_state.attendance_data
-                    display_course_attendance_chart(attendance_data)
+        # Sección de asistencia
+        with st.expander("Asistencia", expanded=True):
+            attendance_data = st.session_state.attendance_data
+            display_course_attendance_chart(attendance_data)
 
-                    if 'detailed_attendance' not in st.session_state:
-                        st.session_state.detailed_attendance = fetch_detailed_attendance_by_course(selected_course_id)
+            detailed_attendance = st.session_state.detailed_attendance
+            if not detailed_attendance.empty:
+                detailed_attendance = format_attendance_data(detailed_attendance)
+                st.write("Ranking de asistencia")
+                st.dataframe(detailed_attendance, use_container_width=True)
 
-                    detailed_attendance = st.session_state.detailed_attendance
-                    
-                    if not detailed_attendance.empty:
-                        # Obtén los valores de asistencia
-                        date_t = detailed_attendance.loc[0, 'date_t']
-                        date_t1 = detailed_attendance.loc[0, 'date_t1']
-                        date_t2 = detailed_attendance.loc[0, 'date_t2']
+            dates = attendance_data['class_date'].unique().tolist()
+            selected_date, attendance_filter = display_attendance_filters(dates)
 
-                        # Renombra las columnas de asistencia usando las fechas
-                        detailed_attendance = detailed_attendance.rename(columns={
-                            'attended_t': f"{date_t}",
-                            'attended_t1': f"{date_t1}",
-                            'attended_t2': f"{date_t2}"
-                        })
+            if selected_date:
+                display_filtered_attendance(selected_course_id, selected_date, attendance_filter)
 
-                        # Convierte 0 y 1 en los íconos de check y cruz
-                        for date_column in [f"{date_t}", f"{date_t1}", f"{date_t2}"]:
-                            detailed_attendance[date_column] = detailed_attendance[date_column].apply(lambda x: '✅' if x == 1 else '❌')
+        # Sección de evaluaciones
+        with st.expander("Evaluaciones", expanded=False):
+            evaluations_data = st.session_state.evaluations_data
+            if not evaluations_data.empty:
+                display_evaluation_filters(evaluations_data, selected_course_id)
+            else:
+                st.write("No se encontraron evaluaciones para este curso.")
 
-                        # Formatear total_attendance_percentage (está como entero entre 0, 100, lo quiero sin decimales)
-                        detailed_attendance['total_attendance_percentage'] = detailed_attendance['total_attendance_percentage'].apply(lambda x: f"{x:.0f}%")
+        # Sección de usuarios
+        with st.expander("Usuarios", expanded=False):
+            display_user_filters()
 
-                        # Selecciona y muestra las columnas requeridas
-                        st.write("Ranking de asistencia")
-                        st.dataframe(detailed_attendance[['name', 'lastName', f"{date_t2}", f"{date_t1}", f"{date_t}", 'total_attendance_percentage']], use_container_width=True)
+def format_attendance_data(detailed_attendance):
+    # Obtiene las fechas para renombrar columnas
+    date_t = detailed_attendance.loc[0, 'date_t']
+    date_t1 = detailed_attendance.loc[0, 'date_t1']
+    date_t2 = detailed_attendance.loc[0, 'date_t2']
 
-                    dates = attendance_data['class_date'].unique().tolist()
+    # Renombra las columnas de asistencia con las fechas
+    detailed_attendance = detailed_attendance.rename(columns={
+        'attended_t': f"{date_t}",
+        'attended_t1': f"{date_t1}",
+        'attended_t2': f"{date_t2}"
+    })
 
-                    col1, col2 = st.columns(2)
+    # Convierte 0 y 1 en los íconos de check y cruz
+    for date_column in [f"{date_t}", f"{date_t1}", f"{date_t2}"]:
+        detailed_attendance[date_column] = detailed_attendance[date_column].apply(lambda x: '✅' if x == 1 else '❌')
 
-                    with col1:
-                        selected_date = st.selectbox("Selecciona una fecha", dates[::-1])
+    # Formatea el porcentaje de asistencia total como un entero sin decimales y con símbolo de %
+    detailed_attendance['total_attendance_percentage'] = detailed_attendance['total_attendance_percentage'].apply(lambda x: f"{x:.0f}%")
 
-                    with col2:
-                        attendance_filter = st.selectbox("Filtrar por asistencia", ["Ausentes", "Presentes"])
+    # Retorna el DataFrame con las columnas renombradas y el formateo aplicado
+    return detailed_attendance[['name', 'lastName', f"{date_t2}", f"{date_t1}", f"{date_t}", 'total_attendance_percentage']]
 
-                    if selected_date:
-                        attendance_status = get_attendance_by_date(selected_course_id, selected_date)
+def display_attendance_filters(dates):
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_date = st.selectbox("Selecciona una fecha", dates[::-1])
+    with col2:
+        attendance_filter = st.selectbox("Filtrar por asistencia", ["Ausentes", "Presentes"])
+    return selected_date, attendance_filter
 
-                        present_students = attendance_status[attendance_status['attendance_status'] == 'present']
-                        absent_students = attendance_status[attendance_status['attendance_status'] == 'absent']
+def display_filtered_attendance(course_id, selected_date, attendance_filter):
+    attendance_status = get_attendance_by_date(course_id, selected_date)
+    present_students = attendance_status[attendance_status['attendance_status'] == 'present']
+    absent_students = attendance_status[attendance_status['attendance_status'] == 'absent']
+    filtered_data = present_students if attendance_filter == "Presentes" else absent_students
+    st.dataframe(filtered_data[['name', 'lastName', 'phone']], use_container_width=True)
 
-                        if attendance_filter == "Presentes":
-                            filtered_data = present_students
-                        elif attendance_filter == "Ausentes":
-                            filtered_data = absent_students
+def display_evaluation_filters(evaluations_data, course_id):
+    assessment_type_mapping = {row['assessment_type_name']: row['assessment_type_id'] for _, row in evaluations_data.iterrows()}
+    selected_assessment_type_name = st.selectbox("Selecciona un tipo de evaluación", list(assessment_type_mapping.keys()))
 
-                        filtered_data_display = filtered_data[['name', 'lastName', 'phone']]
-                        st.dataframe(filtered_data_display, use_container_width=True)
+    if selected_assessment_type_name in assessment_type_mapping:
+        selected_assessment_type_id = assessment_type_mapping[selected_assessment_type_name]
+        performance_data = get_performance_by_assessment_type(course_id, selected_assessment_type_id)
+        display_assessment_performance_chart(performance_data)
+        display_specific_evaluation_filter(evaluations_data, selected_assessment_type_id, course_id)
 
-                with st.expander("Evaluaciones", expanded=False):
-                    if 'evaluations_data' not in st.session_state:
-                        st.session_state.evaluations_data = fetch_evaluations_by_course(selected_course_id)
+def display_specific_evaluation_filter(evaluations_data, selected_assessment_type_id, course_id):
+    selected_assessments = evaluations_data[evaluations_data['assessment_type_id'] == selected_assessment_type_id]
+    assessment_ids = selected_assessments['assessment_id'].tolist()
+    evaluation_names = selected_assessments['assessment_name'].tolist()
 
-                    evaluations_data = st.session_state.evaluations_data
+    if evaluation_names:
+        selected_evaluation_name = st.selectbox("Selecciona una evaluación", evaluation_names)
+        selected_assessment_id = assessment_ids[evaluation_names.index(selected_evaluation_name)]
+        st.session_state.selected_assessment_id = selected_assessment_id
+        assessment_data = fetch_data_by_assessment_id(course_id, selected_assessment_id)
 
-                    if not evaluations_data.empty:
-                        # Crear un diccionario que mapee los tipos de evaluación a sus IDs
-                        assessment_type_mapping = {
-                            row['assessment_type_name']: row['assessment_type_id'] 
-                            for _, row in evaluations_data.iterrows()
-                        }
+        filter_option = st.selectbox("Filtrar por:", ["Presentes", "Ausentes"])
+        filtered_data = assessment_data[assessment_data["absent_users"] == (0 if filter_option == "Presentes" else 1)]
+        
+        st.dataframe(filtered_data.drop(columns=["absent_users"]), use_container_width=True)
 
-                        assessment_types = list(assessment_type_mapping.keys())
+def display_user_filters():
+    user_data = st.session_state.users_data
+    col_filter_1, col_filter_2, col_filter_3 = st.columns(3)
+    with col_filter_1:
+        role_filter = st.selectbox("Filtrar por rol", ["Todos", "Profesores", "Alumnos"])
+    with col_filter_2:
+        email_verified_filter = st.selectbox("Email verificado", ["Todos", "Sí", "No"])
+    with col_filter_3:
+        terms_accepted_filter = st.selectbox("Términos aceptados", ["Todos", "Sí", "No"])
 
-                        # Selecciona el tipo de evaluación
-                        selected_assessment_type_name = st.selectbox("Selecciona un tipo de evaluación", assessment_types)
+    if role_filter != "Todos":
+        role = 'teacher' if role_filter == "Profesores" else 'student'
+        user_data = user_data[user_data['user_course_role'] == role]
 
-                        # Verifica que el tipo de evaluación seleccionado existe en el mapeo
-                        if selected_assessment_type_name in assessment_type_mapping:
-                            selected_assessment_type_id = assessment_type_mapping[selected_assessment_type_name]
+    if email_verified_filter != "Todos":
+        user_data = user_data[user_data['validEmail'] == (email_verified_filter == "Sí")]
 
-                            # Obtener el rendimiento de las evaluaciones para el gráfico
-                            performance_data = get_performance_by_assessment_type(selected_course_id, selected_assessment_type_id)
-                            display_assessment_performance_chart(performance_data)
+    if terms_accepted_filter != "Todos":
+        user_data = user_data[user_data['termsAccepted'] == (terms_accepted_filter == "Sí")]
 
-                            # Agregar un selectbox para elegir una evaluación específica
-                            evaluation_ids = evaluations_data[evaluations_data['assessment_type_id'] == selected_assessment_type_id]['assessment_id'].tolist()
-                            evaluation_names = evaluations_data[evaluations_data['assessment_type_id'] == selected_assessment_type_id]['assessment_name'].tolist()
-
-                            if evaluation_ids:  # Verifica que haya IDs de evaluación
-                                selected_evaluation_name = st.selectbox("Selecciona una evaluación", evaluation_names)
-
-                                # Obtener el ID de la evaluación seleccionada
-                                selected_assessment_id = evaluation_ids[evaluation_names.index(selected_evaluation_name)]
-
-                                # Verificar si el ID de evaluación seleccionado ha cambiado
-                                if 'selected_assessment_id' not in st.session_state or st.session_state.selected_assessment_id != selected_assessment_id:
-                                    # Actualiza el ID y los datos de la evaluación en session_state
-                                    st.session_state.selected_assessment_id = selected_assessment_id
-                                    st.session_state.assessment_data = fetch_data_by_assessment_id(selected_course_id, selected_assessment_id)
-
-                                # Usa la variable guardada en session_state
-                                assessment_data = st.session_state.assessment_data
-
-                                # Añade un selector para filtrar entre presentes y ausentes
-                                filter_option = st.selectbox("Filtrar por:", ["Presentes", "Ausentes"])
-
-                                # Filtra el DataFrame según la selección
-                                if filter_option == "Presentes":
-                                    filtered_data = assessment_data[assessment_data["absent_users"] == 0]
-                                else:  # "Ausentes"
-                                    filtered_data = assessment_data[assessment_data["absent_users"] == 1]
-
-                                # Muestra la tabla sin la columna "absent_users"
-                                st.dataframe(filtered_data.drop(columns=["absent_users"]), use_container_width=True)
-                        else:
-                            st.write("Tipo de evaluación no encontrado.")
-                    else:
-                        st.write("No se encontraron evaluaciones para este curso.")
-
-                with st.expander("Usuarios", expanded=False):
-                    user_data = get_users_by_course(selected_course_id)
-
-                    col_filter_1, col_filter_2, col_filter_3 = st.columns(3)
-                    with col_filter_1:
-                        role_filter = st.selectbox("Filtrar por rol", ["Todos", "Profesores", "Alumnos"])
-                    with col_filter_2:
-                        email_verified_filter = st.selectbox("Email verificado", ["Todos", "Sí", "No"])
-                    with col_filter_3:
-                        terms_accepted_filter = st.selectbox("Términos aceptados", ["Todos", "Sí", "No"])
-
-                    if role_filter != "Todos":
-                        role = 'teacher' if role_filter == "Profesores" else 'student'
-                        user_data = user_data[user_data['user_course_role'] == role]
-
-                    if email_verified_filter != "Todos":
-                        user_data = user_data[user_data['validEmail'] == (email_verified_filter == "Sí")]
-
-                    if terms_accepted_filter != "Todos":
-                        user_data = user_data[user_data['termsAccepted'] == (terms_accepted_filter == "Sí")]
-
-                    columns_to_display = ["name", "lastName", "phone"]
-                    filtered_data_display = user_data[columns_to_display].copy()
-                    st.dataframe(filtered_data_display, use_container_width=True)
-                    
-                    display_user_charts(user_data)
-                    if role_filter == "Profesores":
-                        display_user_education(user_data)
-
-
+    columns_to_display = ["name", "lastName", "phone"]
+    st.dataframe(user_data[columns_to_display], use_container_width=True)
