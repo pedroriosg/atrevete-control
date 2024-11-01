@@ -55,7 +55,13 @@ def display_team_by_year_chart(team_data):
     else:
         st.write("No hay datos de usuarios disponibles para el año seleccionado.")
 
-def display_students_by_grade_chart(schools_users_details):
+def display_students_by_grade_chart(schools_users_details, user_role):
+
+    if user_role == 'student':
+        title = 'Cantidad de alumnos por materia y grado'
+    else:
+        title = 'Cantidad de profesores por materia y grado'
+
     if schools_users_details is not None and not schools_users_details.empty:
         fig = go.Figure()
 
@@ -84,13 +90,12 @@ def display_students_by_grade_chart(schools_users_details):
                 text=subject_data['student_count'],
                 textposition='outside',  # Etiquetas de cantidad encima de la barra
                 width=0.15,  # Ajuste de ancho para mejor separación
-                hovertemplate='<b>%{x}</b><br>Materia: %{name}<br>Estudiantes: %{y}<extra></extra>',  # Hover personalizado
                 marker_color=subject_colors.get(subject, '#000000')  # Obtener el color de la materia, por defecto negro
             ))
 
         # Configuración del diseño del gráfico
         fig.update_layout(
-            title='Cantidad de alumnos por materia y grado',
+            title=title,
             yaxis_title='Cantidad de estudiantes',
             barmode='group',  # Agrupa las barras por grado
             bargap=0.3,  # Espaciado entre grupos de barras

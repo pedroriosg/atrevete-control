@@ -26,8 +26,8 @@ def get_team_by_year(year):
 def get_school_by_year(year):
     return fetch_school_by_year(year)
 
-def get_school_users_details(school_id):
-    return fetch_school_users_details(school_id)
+def get_school_users_details(school_id, user_role):
+    return fetch_school_users_details(school_id, user_role)
 
 def display_general_panel():
     # Obtener datos de años
@@ -58,5 +58,7 @@ def display_general_panel():
     selected_school_name = st.selectbox("Seleccione la escuela", school_names, index=0)
     selected_school_id = school_data[school_data['school_name'] == selected_school_name]['school_id'].values[0]
 
-    school_users_details = get_school_users_details(selected_school_id)
-    display_students_by_grade_chart(school_users_details)
+    school_users_details = get_school_users_details(selected_school_id, 'student')
+    teachers_users_details = get_school_users_details(selected_school_id, 'teacher')
+    display_students_by_grade_chart(school_users_details, 'student')
+    display_students_by_grade_chart(teachers_users_details, 'teacher')

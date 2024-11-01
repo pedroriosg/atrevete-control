@@ -422,7 +422,7 @@ def fetch_school_by_year(year_id):
     with get_connection() as conn:
         return pd.read_sql(query, conn)
 
-def fetch_school_users_details(school_id):
+def fetch_school_users_details(school_id, user_role):
     print("Fetching student counts per subject and grade")
     query = f"""
     SELECT 
@@ -434,7 +434,7 @@ def fetch_school_users_details(school_id):
     JOIN "Subjects" sub ON sub.id = c."SubjectId"
     JOIN "Grades" g ON g.id = c."GradeId"
     JOIN "UserCourses" uc ON uc."CourseId" = c.id
-    JOIN "Users" u ON u.id = uc."UserId" AND uc.role = 'student'
+    JOIN "Users" u ON u.id = uc."UserId" AND uc.role = '{user_role}'
     WHERE s.id = '{school_id}'
     GROUP BY sub.name, g.name
     ORDER BY g.name, sub.name
