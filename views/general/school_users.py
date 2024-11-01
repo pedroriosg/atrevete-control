@@ -41,14 +41,14 @@ def display_team_by_year_chart(team_data):
         fig.update_yaxes(range=[0, team_data[['student_count', 'teacher_count']].values.max() * 1.2])
 
         # Añadir la nota debajo del gráfico
-        fig.add_annotation(
-            text="La cantidad de profesores incorpora al jefe de colegio y a los dos jefes generales",
-            showarrow=False,
-            xref="paper", yref="paper",
-            x=0, y=-0.40,  # Posición de la nota
-            font=dict(size=12),
-            align="center"
-        )
+        # fig.add_annotation(
+        #     text="La cantidad de profesores incorpora al jefe de colegio y a los dos jefes generales",
+        #     showarrow=False,
+        #     xref="paper", yref="paper",
+        #     x=0, y=-0.40,  # Posición de la nota
+        #     font=dict(size=12),
+        #     align="center"
+        # )
 
         # Mostrar el gráfico en Streamlit
         st.plotly_chart(fig)
