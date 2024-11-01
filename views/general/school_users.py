@@ -90,7 +90,8 @@ def display_students_by_grade_chart(schools_users_details, user_role):
                 text=subject_data['student_count'],
                 textposition='outside',  # Etiquetas de cantidad encima de la barra
                 width=0.15,  # Ajuste de ancho para mejor separación
-                marker_color=subject_colors.get(subject, '#000000')  # Obtener el color de la materia, por defecto negro
+                marker_color=subject_colors.get(subject, '#000000'),  # Obtener el color de la materia, por defecto negro
+                hoverinfo='skip'
             ))
 
         # Configuración del diseño del gráfico
@@ -102,7 +103,7 @@ def display_students_by_grade_chart(schools_users_details, user_role):
             bargroupgap=0.15,  # Espaciado entre barras dentro de cada grupo
             template='plotly_white',
             xaxis=dict(tickmode='linear'),  # Asegura que todos los grados se muestren
-            margin=dict(b=100)  # Aumenta margen inferior para la nota
+            margin=dict(b=100),  # Aumenta margen inferior para la nota
         )
 
         fig.update_yaxes(range=[0, schools_users_details['student_count'].max() * 1.5])
