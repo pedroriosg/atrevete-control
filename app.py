@@ -44,14 +44,14 @@ if st.session_state.key_entered:
     # Opciones del menú
     menu_options = {
         "Mi curso": "Mi curso",
-        # "Usuarios": "Usuarios"
+        "Nosotros": "Nosotros"
     }
     menu_selection = st.sidebar.selectbox("", list(menu_options.keys()), format_func=lambda x: menu_options[x])
 
     # Muestra el contenido basado en la selección del menú
     if menu_selection == "Mi curso":
         display_course_panel()
-    # elif menu_selection == "Panel General":
-    #     display_general_panel()
-    # elif menu_selection == "Usuarios":
+    elif menu_selection == "Nosotros":
+        display_general_panel()
+    # elif menu_selection == "Resultados":
     #     display_user_panel()

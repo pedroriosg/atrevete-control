@@ -44,7 +44,7 @@ def fetch_schools():
 def fetch_years():
     print("Fetching years")
     query = """
-    SELECT name FROM "Years"
+    SELECT id, name FROM "Years"
     """
     with get_connection() as conn:
         return pd.read_sql(query, conn)
@@ -387,3 +387,58 @@ def fetch_data_by_assessment_id(course_id, assessment_id):
         performance_data = pd.read_sql(query, conn)
 
     return performance_data
+
+def fetch_team_by_year(year_id):
+    print("Fetching user counts per school")
+    query = f"""
+    SELECT 
+        s.name AS school_name,
+        COUNT(DISTINCT CASE WHEN uc.role = 'teacher' THEN u.id END) AS teacher_count,
+        COUNT(DISTINCT CASE WHEN uc.role = 'student' THEN u.id END) AS student_count
+    FROM "Schools" s
+    LEFT JOIN "Courses" c ON c."SchoolId" = s.id
+    LEFT JOIN "Years" y ON c."YearId" = y.id
+    LEFT JOIN "UserCourses" uc ON uc."CourseId" = c.id
+    LEFT JOIN "Users" u ON u.id = uc."UserId"
+    WHERE y.id = '{year_id}'
+    GROUP BY s.name
+    ORDER BY s.name
+    """
+    with get_connection() as conn:
+        return pd.read_sql(query, conn)
+
+
+def fetch_school_by_year(year_id):
+    print("Fetching unique schools by year")
+    query = f"""
+    SELECT DISTINCT
+        s.id AS school_id,
+        s.name AS school_name
+    FROM "Schools" s
+    JOIN "Courses" c ON c."SchoolId" = s.id
+    WHERE c."YearId" = '{year_id}'
+    ORDER BY s.name
+    """
+    with get_connection() as conn:
+        return pd.read_sql(query, conn)
+
+def fetch_school_users_details(school_id):
+    print("Fetching student counts per subject and grade")
+    query = f"""
+    SELECT 
+        sub.name AS subject_name,
+        g.name AS grade_name,
+        COUNT(DISTINCT u.id) AS student_count
+    FROM "Schools" s
+    JOIN "Courses" c ON c."SchoolId" = s.id
+    JOIN "Subjects" sub ON sub.id = c."SubjectId"
+    JOIN "Grades" g ON g.id = c."GradeId"
+    JOIN "UserCourses" uc ON uc."CourseId" = c.id
+    JOIN "Users" u ON u.id = uc."UserId" AND uc.role = 'student'
+    WHERE s.id = '{school_id}'
+    GROUP BY sub.name, g.name
+    ORDER BY g.name, sub.name
+    """
+    with get_connection() as conn:
+        return pd.read_sql(query, conn)
+

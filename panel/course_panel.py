@@ -119,27 +119,28 @@ def display_course_panel():
             display_user_filters()
 
 def format_attendance_data(detailed_attendance):
-    # Obtiene las fechas para renombrar columnas
-    date_t = detailed_attendance.loc[0, 'date_t']
-    date_t1 = detailed_attendance.loc[0, 'date_t1']
-    date_t2 = detailed_attendance.loc[0, 'date_t2']
+    # Obtiene las fechas para renombrar columnas y les agrega "/" cada dos caracteres
+    date_t = '/'.join(detailed_attendance.loc[0, 'date_t'][i:i+2] for i in range(0, len(detailed_attendance.loc[0, 'date_t']), 2))
+    date_t1 = '/'.join(detailed_attendance.loc[0, 'date_t1'][i:i+2] for i in range(0, len(detailed_attendance.loc[0, 'date_t1']), 2))
+    date_t2 = '/'.join(detailed_attendance.loc[0, 'date_t2'][i:i+2] for i in range(0, len(detailed_attendance.loc[0, 'date_t2']), 2))
 
-    # Renombra las columnas de asistencia con las fechas
+    # Renombra las columnas de asistencia con las fechas formateadas
     detailed_attendance = detailed_attendance.rename(columns={
-        'attended_t': f"{date_t}",
-        'attended_t1': f"{date_t1}",
-        'attended_t2': f"{date_t2}"
+        'attended_t': date_t,
+        'attended_t1': date_t1,
+        'attended_t2': date_t2
     })
 
     # Convierte 0 y 1 en los íconos de check y cruz
-    for date_column in [f"{date_t}", f"{date_t1}", f"{date_t2}"]:
+    for date_column in [date_t, date_t1, date_t2]:
         detailed_attendance[date_column] = detailed_attendance[date_column].apply(lambda x: '✅' if x == 1 else '❌')
 
     # Formatea el porcentaje de asistencia total como un entero sin decimales y con símbolo de %
     detailed_attendance['total_attendance_percentage'] = detailed_attendance['total_attendance_percentage'].apply(lambda x: f"{x:.0f}%")
 
     # Retorna el DataFrame con las columnas renombradas y el formateo aplicado
-    return detailed_attendance[['name', 'lastName', f"{date_t2}", f"{date_t1}", f"{date_t}", 'total_attendance_percentage']]
+    return detailed_attendance[['name', 'lastName', date_t2, date_t1, date_t, 'total_attendance_percentage']]
+
 
 def display_attendance_filters(dates):
     col1, col2 = st.columns(2)
