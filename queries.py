@@ -477,3 +477,27 @@ def fetch_students_by_grade_proportion(year_id, user_role):
 
     with get_connection() as conn:
         return pd.read_sql(query, conn)
+    
+def fetch_users_by_year(year_id):
+    print("Fetching users associated with a course from the specified year")
+    
+    query = f"""
+    SELECT DISTINCT
+        u.id AS user_id,
+        u.name AS user_name,
+        u.email AS user_email,
+        u."termsAccepted",
+        u."validEmail",
+        e.name AS establishment_name,
+        ca.name AS career_name
+        
+    FROM "Users" u
+    JOIN "UserCourses" uc ON u.id = uc."UserId"
+    JOIN "Courses" c ON uc."CourseId" = c.id
+    LEFT JOIN "Establishments" e ON u."EstablishmentId" = e.id
+    LEFT JOIN "Careers" ca ON u."CareerId" = ca.id
+    WHERE c."YearId" = '{year_id}'
+    """
+
+    with get_connection() as conn:
+        return pd.read_sql(query, conn)

@@ -5,7 +5,7 @@ from queries import (
     fetch_attendance_by_course, fetch_attendance_by_date, fetch_detailed_attendance_by_course,
     fetch_performance_by_assessment_type, fetch_evaluations_by_course, fetch_data_by_assessment_id
 )
-from views.users.user_charts import display_user_charts
+from views.users.user_charts import display_user_charts_general
 from views.users.user_education import display_user_education
 from views.users.course_attendance import display_course_attendance_chart
 from views.users.course_evaluations import display_assessment_performance_chart
@@ -207,7 +207,7 @@ def display_user_filters():
     columns_to_display = ["name", "lastName", "phone"]
     st.dataframe(user_data[columns_to_display], use_container_width=True)
 
-    display_user_charts(user_data)
+    display_user_charts_general(user_data)
 
     # Conditionally display user education based on the role filter
     # if role_filter != "Alumnos":

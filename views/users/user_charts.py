@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 
-def display_user_charts(filtered_data):
+def display_user_charts_general(filtered_data):
 
     # Crear columnas para mostrar los gráficos uno al lado del otro
     col1, col2 = st.columns(2)

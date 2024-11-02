@@ -1,7 +1,6 @@
 import streamlit as st
 from panel.general_panel import display_general_panel
 from panel.course_panel import display_course_panel
-from panel.user_panel import display_user_panel
 
 # Configuración de la página
 st.set_page_config(
@@ -53,5 +52,3 @@ if st.session_state.key_entered:
         display_course_panel()
     elif menu_selection == "Nosotros":
         display_general_panel()
-    # elif menu_selection == "Resultados":
-    #     display_user_panel()

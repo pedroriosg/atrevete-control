@@ -6,11 +6,14 @@ from queries import (
     fetch_school_by_year,
     fetch_school_users_details,
     fetch_proportion_type_user,
-    fetch_students_by_grade_proportion
+    fetch_students_by_grade_proportion,
+    fetch_users_by_year
 )
 
 from views.general.school_users import (display_team_by_year_chart, display_students_by_grade_chart)
 from views.general.users_proportion import display_user_charts
+from views.users.user_charts import display_user_charts_general
+from views.users.user_education import display_user_education
 
 @st.cache_data
 def get_years():
@@ -42,10 +45,16 @@ def get_proportion_type_user(year):
 def get_students_by_grade_proportion(year_id, user_role):
     return fetch_students_by_grade_proportion(year_id, user_role)
 
+@st.cache_data
+def get_users_by_year(year_id):
+    return fetch_users_by_year(year_id)
+
 
 def display_general_panel():
     # Obtener datos de años
     years_data = get_years()
+
+    st.write
 
     # Asegurarse de que years_data sea una lista de diccionarios con "name" e "id"
     if not years_data:
@@ -61,6 +70,12 @@ def display_general_panel():
     
     # Obtener el id correspondiente al año seleccionado
     selected_year_id = year_ids[selected_year_name]
+
+    users_by_year_data = get_users_by_year(selected_year_id)
+    display_user_charts_general(users_by_year_data)
+    display_user_education(users_by_year_data)
+
+
 
     type_user_proportion = get_proportion_type_user(selected_year_id)
     students_by_grade_proportion = get_students_by_grade_proportion(selected_year_id, 'student')

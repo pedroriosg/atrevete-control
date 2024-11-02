@@ -59,8 +59,10 @@ def display_students_by_grade_chart(schools_users_details, user_role):
 
     if user_role == 'student':
         title = 'Cantidad de alumnos por materia y grado'
+        y_label = 'Cantidad de alumnos'
     else:
         title = 'Cantidad de profesores por materia y grado'
+        y_label = 'Cantidad de profesores'
 
     if schools_users_details is not None and not schools_users_details.empty:
         fig = go.Figure()
@@ -94,10 +96,11 @@ def display_students_by_grade_chart(schools_users_details, user_role):
                 hoverinfo='skip'
             ))
 
+
         # Configuración del diseño del gráfico
         fig.update_layout(
             title=title,
-            yaxis_title='Cantidad de estudiantes',
+            yaxis_title=y_label,
             barmode='group',  # Agrupa las barras por grado
             bargap=0.3,  # Espaciado entre grupos de barras
             bargroupgap=0.15,  # Espaciado entre barras dentro de cada grupo
