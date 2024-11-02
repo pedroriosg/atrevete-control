@@ -442,3 +442,38 @@ def fetch_school_users_details(school_id, user_role):
     with get_connection() as conn:
         return pd.read_sql(query, conn)
 
+def fetch_proportion_type_user(year_id):
+    print("Fetching proportion of user types")
+    query = f"""
+    SELECT 
+        uc.role AS user_role,
+        COUNT(DISTINCT u.id) AS user_count
+    FROM "UserCourses" uc
+    JOIN "Courses" c ON uc."CourseId" = c.id
+    JOIN "Years" y ON y.id = c."YearId"  -- Corrected the JOIN condition
+    JOIN "Users" u ON u.id = uc."UserId"
+    WHERE c."YearId" = '{year_id}'
+    GROUP BY uc.role
+    """
+
+    with get_connection() as conn:
+        return pd.read_sql(query, conn)
+
+def fetch_students_by_grade_proportion(year_id, user_role):
+    print("Fetching proportion of students by grade")
+    
+    query = f"""
+    SELECT 
+        g.name AS grade_name,
+        COUNT(DISTINCT u.id) AS user_count
+    FROM "UserCourses" uc
+    JOIN "Courses" c ON uc."CourseId" = c.id
+    JOIN "Grades" g ON g.id = c."GradeId"
+    JOIN "Users" u ON u.id = uc."UserId"
+    WHERE c."YearId" = '{year_id}' AND uc.role = '{user_role}'
+    GROUP BY g.name
+    ORDER BY g.name
+    """
+
+    with get_connection() as conn:
+        return pd.read_sql(query, conn)

@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # Clave para desbloquear la vista
-secret_key = st.secrets["PASSWORD"]
+secret_key = st.secrets["secret_key"]
 
 # Usa una variable de sesión para controlar si la clave se ha ingresado correctamente
 if 'key_entered' not in st.session_state:
