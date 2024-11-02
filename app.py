@@ -16,6 +16,10 @@ secret_key = st.secrets["secret_key"]
 if 'key_entered' not in st.session_state:
     st.session_state.key_entered = False
 
+# Variable de sesión para la opción seleccionada en el menú
+if 'menu_selection' not in st.session_state:
+    st.session_state.menu_selection = "Mi curso"  # Selecciona "Nosotros" por defecto
+
 # Crear un contenedor vacío para el input de la clave
 key_input_container = st.empty()
 
@@ -40,15 +44,29 @@ if st.session_state.key_entered:
         with cols[1]:  # La columna central
             st.image("ablue.png", use_column_width=True)
 
-    # Opciones del menú
-    menu_options = {
-        "Mi curso": "Mi curso",
-        "Nosotros": "Nosotros"
-    }
-    menu_selection = st.sidebar.selectbox("", list(menu_options.keys()), format_func=lambda x: menu_options[x])
+    # Opciones del menú con botones de ancho completo
+    if st.sidebar.button("Mi curso", use_container_width=True, key="mi_curso_button"):
+        st.session_state.menu_selection = "Mi curso"
+    if st.sidebar.button("Nosotros", use_container_width=True, key="nosotros_button"):
+        st.session_state.menu_selection = "Nosotros"
 
     # Muestra el contenido basado en la selección del menú
-    if menu_selection == "Mi curso":
-        display_course_panel()
-    elif menu_selection == "Nosotros":
+    if st.session_state.menu_selection == "Nosotros":
         display_general_panel()
+    elif st.session_state.menu_selection == "Mi curso":
+        display_course_panel()
+
+    # Estilo para resaltar el botón activo
+    st.markdown(
+        f"""
+        <style>
+        div[role="button"][aria-label="Nosotros"] {{
+            background-color: {'#add8e6' if st.session_state.menu_selection == "Nosotros" else '#f0f0f0'};
+        }}
+        div[role="button"][aria-label="Mi curso"] {{
+            background-color: {'#add8e6' if st.session_state.menu_selection == "Mi curso" else '#f0f0f0'};
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
