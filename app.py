@@ -44,16 +44,17 @@ if st.session_state.key_entered:
         with cols[1]:  # La columna central
             st.image("ablue.png", use_column_width=True)
 
-        # Agrega un botón para limpiar el cache de datos
-        if st.button("Limpiar caché de datos"):
-            st.cache_data.clear()  # Limpia la caché
-            st.success("La caché de datos ha sido limpiada exitosamente.")
 
     # Opciones del menú con botones de ancho completo
     if st.sidebar.button("Mi curso", use_container_width=True, key="mi_curso_button"):
         st.session_state.menu_selection = "Mi curso"
     if st.sidebar.button("Nosotros", use_container_width=True, key="nosotros_button"):
         st.session_state.menu_selection = "Nosotros"
+        
+    # Agrega un botón para limpiar el cache de datos
+    if st.button("Limpiar caché de datos", se_container_width=True)
+        st.cache_data.clear()  # Limpia la caché
+        st.success("La caché de datos ha sido limpiada exitosamente.")
 
     # Muestra el contenido basado en la selección del menú
     if st.session_state.menu_selection == "Nosotros":
