@@ -52,7 +52,7 @@ if st.session_state.key_entered:
         st.session_state.menu_selection = "Nosotros"
         
     # Agrega un botón para limpiar el cache de datos
-    if st.button("Limpiar caché de datos", se_container_width=True)
+    if st.button("Limpiar caché de datos", use_container_width=True):
         st.cache_data.clear()  # Limpia la caché
         st.success("La caché de datos ha sido limpiada exitosamente.")
 
