@@ -50,14 +50,11 @@ if st.session_state.key_entered:
         if st.sidebar.button("Nosotros", use_container_width=True, key="nosotros_button"):
             st.session_state.menu_selection = "Nosotros"
         
-        # Espacio para empujar el botón de limpieza al final
-        st.sidebar.empty()
-        st.sidebar.empty()
 
         # Agrega un botón para limpiar el caché de datos
         if st.sidebar.button("Limpiar caché de datos", use_container_width=True):
             st.cache_data.clear()  # Limpia la caché
-            st.sidebar.success("Caché de datos limpiada.", icon="✅")
+            st.sidebar.success("Caché de datos limpiada")
 
     # Muestra el contenido basado en la selección del menú
     if st.session_state.menu_selection == "Nosotros":
