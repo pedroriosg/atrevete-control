@@ -124,6 +124,8 @@ def fetch_attendance_by_course(course_id):
 
 def fetch_attendance_by_date(course_id, class_date):
     print("Fetching attendance by date")
+    class_date = class_date.replace("/", "")
+
     query = '''
     SELECT 
         u.id, 
